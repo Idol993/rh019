@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>动力电池全生命周期溯源与梯次利用平台</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+  <div id="login-page" class="login-page">
+    <div class="login-container">
+      <div class="login-header">
+        <div class="logo">
+          <svg width="60" height="60" viewBox="0 0 60 60">
+            <polygon points="30,5 55,20 55,45 30,55 5,45 5,20" fill="none" stroke="#00d4ff" stroke-width="2"/>
+            <polygon points="30,15 45,25 45,40 30,48 15,40 15,25" fill="rgba(0,212,255,0.3)" stroke="#00d4ff" stroke-width="1.5"/>
+            <line x1="30" y1="25" x2="30" y2="40" stroke="#00ff88" stroke-width="3"/>
+            <line x1="23" y1="32" x2="37" y2="32" stroke="#00ff88" stroke-width="2"/>
+          </svg>
+        </div>
+        <h1>动力电池全生命周期溯源平台</h1>
+        <p>Battery Lifecycle Traceability & Echelon Utilization Platform</p>
+      </div>
+      <div class="login-form">
+        <div class="form-group">
+          <label>用户名</label>
+          <input type="text" id="username" placeholder="请输入用户名" value="admin">
+        </div>
+        <div class="form-group">
+          <label>密码</label>
+          <input type="password" id="password" placeholder="请输入密码" value="admin123">
+        </div>
+        <div class="form-group">
+          <label>角色</label>
+          <select id="role-select">
+            <option value="admin">系统管理员</option>
+            <option value="factory">电池厂</option>
+            <option value="oem">车企</option>
+            <option value="recycler">回收商</option>
+            <option value="regulator">监管部门</option>
+          </select>
+        </div>
+        <button class="login-btn" onclick="handleLogin()">登 录</button>
+        <div class="login-tips">
+          <p>测试账号：</p>
+          <p>管理员: admin / admin123</p>
+          <p>监管: regulator / regulator123</p>
+        </div>
+      </div>
+    </div>
+    <div class="login-bg"></div>
+  </div>
+
+  <div id="main-app" class="main-app hidden">
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-small">
+          <svg width="32" height="32" viewBox="0 0 60 60">
+            <polygon points="30,5 55,20 55,45 30,55 5,45 5,20" fill="none" stroke="#00d4ff" stroke-width="2"/>
+            <polygon points="30,15 45,25 45,40 30,48 15,40 15,25" fill="rgba(0,212,255,0.3)" stroke="#00d4ff" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <h1 class="app-title">动力电池全生命周期溯源与梯次利用平台</h1>
+      </div>
+      <div class="header-center">
+        <div class="time-display" id="time-display"></div>
+      </div>
+      <div class="header-right">
+        <div class="user-info">
+          <span class="user-role" id="user-role">管理员</span>
+          <span class="user-name" id="user-name">admin</span>
+          <button class="logout-btn" onclick="handleLogout()">退出</button>
+        </div>
+      </div>
+    </header>
+
+    <nav class="nav-sidebar">
+      <ul class="nav-menu">
+        <li class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')">
+          <span class="nav-icon">📊</span>
+          <span class="nav-text">监管大屏</span>
+        </li>
+        <li class="nav-item" data-page="battery" onclick="switchPage('battery')">
+          <span class="nav-icon">🔋</span>
+          <span class="nav-text">电池档案</span>
+        </li>
+        <li class="nav-item" data-page="monitor" onclick="switchPage('monitor')">
+          <span class="nav-icon">📡</span>
+          <span class="nav-text">实时监控</span>
+        </li>
+        <li class="nav-item" data-page="trace" onclick="switchPage('trace')">
+          <span class="nav-icon">🔗</span>
+          <span class="nav-text">溯源追踪</span>
+        </li>
+        <li class="nav-item" data-page="warning" onclick="switchPage('warning')">
+          <span class="nav-icon">⚠️</span>
+          <span class="nav-text">安全预警</span>
+          <span class="nav-badge" id="warning-badge">0</span>
+        </li>
+        <li class="nav-item" data-page="recycle" onclick="switchPage('recycle')">
+          <span class="nav-icon">♻️</span>
+          <span class="nav-text">回收梯次</span>
+        </li>
+        <li class="nav-item" data-page="carbon" onclick="switchPage('carbon')">
+          <span class="nav-icon">🌱</span>
+          <span class="nav-text">碳核算</span>
+        </li>
+      </ul>
+    </nav>
+
+    <main class="main-content">
+      <div id="page-dashboard" class="page active">
+        <div class="dashboard-grid">
+          <div class="stats-row">
+            <div class="stat-card stat-primary">
+              <div class="stat-icon">🔋</div>
+              <div class="stat-content">
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-label">电池总数</div>
+              </div>
+              <div class="stat-trend up">+12%</div>
+            </div>
+            <div class="stat-card stat-success">
+              <div class="stat-icon">📡</div>
+              <div class="stat-content">
+                <div class="stat-value" id="stat-online">0</div>
+                <div class="stat-label">在线数量</div>
+              </div>
+              <div class="stat-trend">
+                <span id="stat-rate">0%</span>
+              </div>
+            </div>
+            <div class="stat-card stat-warning">
+              <div class="stat-icon">⚠️</div>
+              <div class="stat-content">
+                <div class="stat-value" id="stat-warning">0</div>
+                <div class="stat-label">今日预警</div>
+              </div>
+              <div class="stat-trend down">紧急: <span id="stat-critical">0</span></div>
+            </div>
+            <div class="stat-card stat-info">
+              <div class="stat-icon">🌱</div>
+              <div class="stat-content">
+                <div class="stat-value" id="stat-carbon">0</div>
+                <div class="stat-label">碳减排(kgCO₂e)</div>
+              </div>
+              <div class="stat-trend up">+8.5%</div>
+            </div>
+            <div class="stat-card stat-purple">
+              <div class="stat-icon">📊</div>
+              <div class="stat-content">
+                <div class="stat-value" id="stat-soh">0%</div>
+                <div class="stat-label">平均SOH</div>
+              </div>
+              <div class="stat-trend">健康</div>
+            </div>
+            <div class="stat-card stat-orange">
+              <div class="stat-icon">♻️</div>
+              <div class="stat-content">
+                <div class="stat-value" id="stat-echelon">0%</div>
+                <div class="stat-label">梯次利用率</div>
+              </div>
+              <div class="stat-trend up">+2.3%</div>
+            </div>
+          </div>
+
+          <div class="charts-row charts-row-2">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3>在线电池趋势</h3>
+                <span class="chart-badge">24小时</span>
+              </div>
+              <div class="chart-body" id="chart-online-trend"></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3>SOH分布</h3>
+                <span class="chart-badge">全部电池</span>
+              </div>
+              <div class="chart-body" id="chart-soh-distribution"></div>
+            </div>
+          </div>
+
+          <div class="charts-row charts-row-3">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3>电池类型分布</h3>
+              </div>
+              <div class="chart-body" id="chart-type-distribution"></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3>区域分布热力</h3>
+              </div>
+              <div class="chart-body" id="chart-region-heatmap"></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3>电池厂排名</h3>
+              </div>
+              <div class="chart-body" id="chart-factory-ranking"></div>
+            </div>
+          </div>
+
+          <div class="charts-row">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3>预警趋势</h3>
+                <span class="chart-badge">近7天</span>
+              </div>
+              <div class="chart-body" id="chart-warning-trend"></div>
+            </div>
+          </div>
+
+          <div class="charts-row">
+            <div class="chart-card full-width">
+              <div class="chart-header">
+                <h3>实时电池状态</h3>
+                <span class="chart-badge live">● LIVE</span>
+              </div>
+              <div class="chart-body">
+                <div class="battery-grid" id="realtime-battery-grid">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="page-battery" class="page">
+        <div class="page-header">
+          <h2>电池档案管理</h2>
+          <div class="page-actions">
+            <button class="btn btn-primary" onclick="showCreateModal()">+ 新建电池</button>
+            <button class="btn btn-secondary" onclick="exportData()">导出数据</button>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <div class="filter-item">
+            <label>电池状态</label>
+            <select id="filter-status" onchange="loadBatteries()">
+              <option value="">全部</option>
+              <option value="running">运行中</option>
+              <option value="charging">充电中</option>
+              <option value="idle">待机</option>
+              <option value="retired">退役</option>
+              <option value="echelon">梯次利用</option>
+              <option value="dismantled">已拆解</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>电池类型</label>
+            <select id="filter-type" onchange="loadBatteries()">
+              <option value="">全部</option>
+              <option value="三元锂">三元锂</option>
+              <option value="磷酸铁锂">磷酸铁锂</option>
+              <option value="锰酸锂">锰酸锂</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>关键词</label>
+            <input type="text" id="filter-keyword" placeholder="电池ID/VIN/车型" onkeyup="if(event.key==='Enter')loadBatteries()">
+          </div>
+          <button class="btn btn-primary" onclick="loadBatteries()">查询</button>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>电池ID</th>
+                <th>电池类型</th>
+                <th>额定容量</th>
+                <th>当前SOH</th>
+                <th>循环次数</th>
+                <th>VIN码</th>
+                <th>状态</th>
+                <th>所属区域</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="battery-table-body">
+            </tbody>
+          </table>
+          <div class="pagination" id="pagination">
+          </div>
+        </div>
+      </div>
+
+      <div id="page-monitor" class="page">
+        <div class="page-header">
+          <h2>实时监控中心</h2>
+          <div class="monitor-stats">
+            <div class="mini-stat">
+              <span class="mini-label">运行中</span>
+              <span class="mini-value running" id="mini-running">0</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-label">充电中</span>
+              <span class="mini-value charging" id="mini-charging">0</span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-label">待机</span>
+              <span class="mini-value idle" id="mini-idle">0</span>
+            </div>
+          </div>
+        </div>
+        <div class="monitor-layout">
+          <div class="monitor-list">
+            <div class="list-header">
+              <h3>电池列表</h3>
+              <input type="text" class="search-input" placeholder="搜索电池ID..." id="monitor-search" oninput="filterMonitorList()">
+            </div>
+            <div class="battery-list" id="monitor-battery-list">
+            </div>
+          </div>
+          <div class="monitor-detail">
+            <div class="detail-header" id="monitor-detail-header">
+              <p>请选择一个电池查看详情</p>
+            </div>
+            <div class="detail-content" id="monitor-detail-content">
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <span class="detail-label">总电压</span>
+                  <span class="detail-value" id="detail-voltage">--</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">总电流</span>
+                  <span class="detail-value" id="detail-current">--</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">SOC</span>
+                  <span class="detail-value" id="detail-soc">--</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">SOH</span>
+                  <span class="detail-value" id="detail-soh">--</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">最高温度</span>
+                  <span class="detail-value" id="detail-maxtemp">--</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">最低温度</span>
+                  <span class="detail-value" id="detail-mintemp">--</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">温差</span>
+                  <span class="detail-value" id="detail-tempdiff">--</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">绝缘电阻</span>
+                  <span class="detail-value" id="detail-insulation">--</span>
+                </div>
+              </div>
+              <div class="detail-chart">
+                <h4>SOC/SOH 趋势</h4>
+                <div id="detail-chart-soc" class="detail-chart-box"></div>
+              </div>
+              <div class="detail-chart">
+                <h4>温度趋势</h4>
+                <div id="detail-chart-temp" class="detail-chart-box"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="page-trace" class="page">
+        <div class="page-header">
+          <h2>全生命周期溯源</h2>
+        </div>
+        <div class="trace-search">
+          <input type="text" id="trace-battery-id" placeholder="请输入电池ID进行溯源查询">
+          <button class="btn btn-primary" onclick="searchTrace()">🔍 溯源查询</button>
+          <button class="btn btn-secondary" onclick="scanQrCode()">📷 扫码识别</button>
+        </div>
+        <div id="trace-result" class="trace-result hidden">
+          <div class="trace-header">
+            <div class="trace-battery-info">
+              <h3 id="trace-battery-name">电池ID</h3>
+              <p id="trace-battery-type">电池类型</p>
+            </div>
+            <div class="trace-status">
+              <span class="status-badge" id="trace-status">状态</span>
+            </div>
+          </div>
+          <div class="trace-chain">
+            <div class="trace-timeline" id="trace-timeline">
+            </div>
+          </div>
+          <div class="trace-detail">
+            <div class="trace-blockchain">
+              <h4>🔗 区块链存证信息</h4>
+              <div class="blockchain-info" id="blockchain-info">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="trace-empty" id="trace-empty">
+          <div class="empty-icon">🔍</div>
+          <p>输入电池ID查询全生命周期溯源信息</p>
+        </div>
+      </div>
+
+      <div id="page-warning" class="page">
+        <div class="page-header">
+          <h2>安全预警中心</h2>
+          <div class="warning-stats-header">
+            <div class="warning-stat">
+              <span class="ws-value" id="ws-total">0</span>
+              <span class="ws-label">总预警数</span>
+            </div>
+            <div class="warning-stat normal">
+              <span class="ws-value" id="ws-normal">0</span>
+              <span class="ws-label">一般预警</span>
+            </div>
+            <div class="warning-stat urgent">
+              <span class="ws-value" id="ws-urgent">0</span>
+              <span class="ws-label">紧急预警</span>
+            </div>
+            <div class="warning-stat critical">
+              <span class="ws-value" id="ws-critical">0</span>
+              <span class="ws-label">特级预警</span>
+            </div>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <div class="filter-item">
+            <label>预警级别</label>
+            <select id="warning-level" onchange="loadWarnings()">
+              <option value="">全部</option>
+              <option value="normal">一般</option>
+              <option value="urgent">紧急</option>
+              <option value="critical">特级</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>处理状态</label>
+            <select id="warning-status" onchange="loadWarnings()">
+              <option value="">全部</option>
+              <option value="pending">待处理</option>
+              <option value="handled">已处理</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="loadWarnings()">查询</button>
+        </div>
+        <div class="warning-list" id="warning-list">
+        </div>
+        <div class="pagination" id="warning-pagination">
+        </div>
+      </div>
+
+      <div id="page-recycle" class="page">
+        <div class="page-header">
+          <h2>回收与梯次利用</h2>
+        </div>
+        <div class="recycle-tabs">
+          <button class="tab-btn active" data-tab="assess" onclick="switchRecycleTab('assess')">退役评估</button>
+          <button class="tab-btn" data-tab="echelon" onclick="switchRecycleTab('echelon')">梯次项目</button>
+          <button class="tab-btn" data-tab="dismantle" onclick="switchRecycleTab('dismantle')">拆解管理</button>
+          <button class="tab-btn" data-tab="verify" onclick="switchRecycleTab('verify')">回收验真</button>
+        </div>
+
+        <div id="tab-assess" class="tab-content active">
+          <div class="assess-section">
+            <div class="assess-input">
+              <h3>电池退役评估</h3>
+              <p>输入电池ID进行退役残值评估</p>
+              <div class="assess-form">
+                <input type="text" id="assess-battery-id" placeholder="请输入电池ID">
+                <button class="btn btn-primary" onclick="doAssess()">开始评估</button>
+              </div>
+            </div>
+            <div id="assess-result" class="assess-result hidden">
+              <div class="assess-score">
+                <div class="score-circle">
+                  <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#2a3f5f" stroke-width="8"/>
+                    <circle id="score-progress" cx="50" cy="50" r="45" fill="none" stroke="#00d4ff" stroke-width="8"
+                      stroke-dasharray="283" stroke-dashoffset="283" transform="rotate(-90 50 50)"/>
+                  </svg>
+                  <div class="score-text">
+                    <span id="score-value">0</span>
+                    <small>分</small>
+                  </div>
+                </div>
+                <div class="assess-recommendation">
+                  <h4>推荐处理路径</h4>
+                  <p id="assess-recommendation">--</p>
+                </div>
+              </div>
+              <div class="assess-details">
+                <h4>评分详情</h4>
+                <div class="score-breakdown" id="score-breakdown">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-echelon" class="tab-content">
+          <div class="echelon-grid" id="echelon-grid">
+          </div>
+        </div>
+
+        <div id="tab-dismantle" class="tab-content">
+          <div class="dismantle-form">
+            <h3>拆解记录录入</h3>
+            <form class="form-grid">
+              <div class="form-item">
+                <label>电池ID</label>
+                <input type="text" id="dismantle-battery-id" placeholder="请输入电池ID">
+              </div>
+              <div class="form-item">
+                <label>电池重量(kg)</label>
+                <input type="number" id="dismantle-weight" placeholder="请输入重量">
+              </div>
+              <div class="form-item">
+                <label>锂回收率</label>
+                <input type="text" id="dismantle-lithium" placeholder="如: 95%">
+              </div>
+              <div class="form-item">
+                <label>钴回收率</label>
+                <input type="text" id="dismantle-cobalt" placeholder="如: 92%">
+              </div>
+              <div class="form-item">
+                <label>镍回收率</label>
+                <input type="text" id="dismantle-nickel" placeholder="如: 90%">
+              </div>
+              <div class="form-item">
+                <label>锰回收率</label>
+                <input type="text" id="dismantle-manganese" placeholder="如: 88%">
+              </div>
+              <div class="form-item full">
+                <label>废料处置方式</label>
+                <select id="dismantle-disposal">
+                  <option value="">请选择</option>
+                  <option value="safe_disposal">安全填埋</option>
+                  <option value="recycle">回收再利用</option>
+                  <option value="special_treatment">特殊处理</option>
+                </select>
+              </div>
+              <div class="form-item full">
+                <label>环保凭证编号</label>
+                <input type="text" id="dismantle-cert" placeholder="请输入环保凭证编号">
+              </div>
+              <div class="form-item full">
+                <button type="button" class="btn btn-primary" onclick="submitDismantle()">提交拆解记录</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div id="tab-verify" class="tab-content">
+          <div class="verify-section">
+            <h3>回收验真</h3>
+            <p>通过NFC芯片、二维码、数字签名三重验证电池身份</p>
+            <div class="verify-form">
+              <div class="form-item">
+                <label>电池ID</label>
+                <input type="text" id="verify-battery-id" placeholder="请输入电池ID">
+              </div>
+              <div class="form-item">
+                <label>NFC芯片ID</label>
+                <input type="text" id="verify-nfc" placeholder="请输入NFC芯片ID">
+              </div>
+              <div class="form-item">
+                <label>二维码内容</label>
+                <input type="text" id="verify-qr" placeholder="请输入二维码内容">
+              </div>
+              <button class="btn btn-primary" onclick="doVerify()">开始验真</button>
+            </div>
+            <div id="verify-result" class="verify-result hidden">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="page-carbon" class="page">
+        <div class="page-header">
+          <h2>碳足迹核算</h2>
+          <div class="carbon-summary-cards">
+            <div class="carbon-card">
+              <span class="cc-label">总碳排放</span>
+              <span class="cc-value" id="cc-total">0</span>
+              <span class="cc-unit">kgCO₂e</span>
+            </div>
+            <div class="carbon-card reduction">
+              <span class="cc-label">碳减排</span>
+              <span class="cc-value" id="cc-reduction">0</span>
+              <span class="cc-unit">kgCO₂e</span>
+            </div>
+            <div class="carbon-card">
+              <span class="cc-label">净排放</span>
+              <span class="cc-value" id="cc-net">0</span>
+              <span class="cc-unit">kgCO₂e</span>
+            </div>
+          </div>
+        </div>
+        <div class="carbon-layout">
+          <div class="carbon-chart-large">
+            <div class="chart-header">
+              <h3>碳排放趋势</h3>
+              <select id="carbon-period" onchange="loadCarbonSummary()">
+                <option value="month">近30天</option>
+                <option value="quarter">近3个月</option>
+                <option value="year">近一年</option>
+              </select>
+            </div>
+            <div id="chart-carbon-trend" class="chart-body-large"></div>
+          </div>
+          <div class="carbon-side">
+            <div class="carbon-stage-chart">
+              <h4>各阶段碳排放占比</h4>
+              <div id="chart-carbon-stage"></div>
+            </div>
+            <div class="carbon-calculator">
+              <h4>🔍 单电池碳足迹查询</h4>
+              <input type="text" id="carbon-battery-id" placeholder="请输入电池ID">
+              <button class="btn btn-primary btn-sm" onclick="queryBatteryCarbon()">查询</button>
+            </div>
+            <div id="carbon-battery-detail" class="carbon-battery-detail hidden">
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">标题</h3>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden">
+    <span id="toast-message"></span>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/battery.js"></script>
+  <script src="js/monitor.js"></script>
+  <script src="js/trace.js"></script>
+  <script src="js/warning.js"></script>
+  <script src="js/recycle.js"></script>
+  <script src="js/carbon.js"></script>
+</body>
+</html>
