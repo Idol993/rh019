@@ -3,6 +3,7 @@ const { batteries, historyData, generateMockHistoryData } = require('../data/sto
 const { 
   authenticateToken, 
   requirePermission,
+  hasPermission,
   filterByFactory,
   canAccessBattery
 } = require('./auth');
@@ -10,6 +11,10 @@ const {
 const router = express.Router();
 
 router.get('/realtime', authenticateToken, (req, res) => {
+  if (!hasPermission(req.user, 'monitor:read') && !hasPermission(req.user, 'monitor:read_own')) {
+    return res.status(403).json({ code: 403, message: '权限不足，需要监控数据读取权限' });
+  }
+  
   const { batteryIds } = req.query;
   
   let targetBatteries = [...batteries];
@@ -52,6 +57,10 @@ router.get('/realtime', authenticateToken, (req, res) => {
 });
 
 router.get('/:batteryId/latest', authenticateToken, (req, res) => {
+  if (!hasPermission(req.user, 'monitor:read') && !hasPermission(req.user, 'monitor:read_own')) {
+    return res.status(403).json({ code: 403, message: '权限不足，需要监控数据读取权限' });
+  }
+  
   const { batteryId } = req.params;
   const battery = batteries.find(b => b.batteryId === batteryId);
   
@@ -104,6 +113,10 @@ router.get('/:batteryId/latest', authenticateToken, (req, res) => {
 });
 
 router.get('/:batteryId/history', authenticateToken, (req, res) => {
+  if (!hasPermission(req.user, 'monitor:read') && !hasPermission(req.user, 'monitor:read_own')) {
+    return res.status(403).json({ code: 403, message: '权限不足，需要监控数据读取权限' });
+  }
+  
   const { batteryId } = req.params;
   const { days = 7, type = 'hourly' } = req.query;
   
@@ -163,6 +176,11 @@ router.get('/:batteryId/history', authenticateToken, (req, res) => {
 });
 
 router.get('/:batteryId/alarms', authenticateToken, (req, res) => {
+  if (!hasPermission(req.user, 'monitor:read') && !hasPermission(req.user, 'monitor:read_own') &&
+      !hasPermission(req.user, 'warning:read') && !hasPermission(req.user, 'warning:read_own')) {
+    return res.status(403).json({ code: 403, message: '权限不足，需要监控或预警读取权限' });
+  }
+  
   const { batteryId } = req.params;
   const { warnings } = require('../data/store');
   

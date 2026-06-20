@@ -20,6 +20,10 @@ function loadBatteries() {
   if (keyword) params.keyword = keyword;
   if (factoryCode) params.factoryCode = factoryCode;
   
+  if (!batteryMeta) {
+    loadBatteryMeta();
+  }
+  
   api.battery.list(params).then(result => {
     if (result && result.code === 200) {
       renderBatteryTable(result.data.list);
@@ -258,19 +262,30 @@ function viewTrace(batteryId) {
 function showCreateModal() {
   if (!batteryMeta) {
     loadBatteryMeta();
+    showToast('正在加载配置数据，请稍候...');
+    setTimeout(() => {
+      if (batteryMeta) {
+        showCreateModal();
+      } else {
+        showToast('配置数据加载失败，请重试', 'error');
+      }
+    }, 800);
+    return;
   }
   
-  const factoryOptions = batteryMeta ? batteryMeta.factories.map(f => 
+  const factoryOptions = batteryMeta.factories.map(f => 
     `<option value="${f.code}">${f.name}</option>`
-  ).join('') : '<option value="CATL01">宁德时代</option>';
+  ).join('');
   
-  const modelOptions = batteryMeta ? batteryMeta.models.map(m => 
+  const modelOptions = batteryMeta.models.map(m => 
     `<option value="${m.code}">${m.name}</option>`
-  ).join('') : '<option value="MDL001">Model S - 轿车</option>';
+  ).join('');
   
-  const formulaOptions = batteryMeta ? batteryMeta.formulas.map(f => 
+  const defaultType = '三元锂';
+  const formulaList = batteryMeta.cellFormulas[defaultType] || [];
+  const formulaOptions = formulaList.map(f => 
     `<option value="${f}">${f}</option>`
-  ).join('') : '<option value="NCM811">NCM811</option>';
+  ).join('');
   
   showModal('新建电池档案', `
     <div style="max-height: 65vh; overflow-y: auto; padding-right: 8px;">
@@ -293,18 +308,18 @@ function showCreateModal() {
         </div>
         <div class="form-item">
           <label>电池类型 <span style="color: #ff4466;">*</span></label>
-          <select id="new-type">
-            <option value="三元锂">三元锂</option>
-            <option value="磷酸铁锂">磷酸铁锂</option>
-            <option value="锰酸锂">锰酸锂</option>
+          <select id="new-type" onchange="updateFormulaOptions()">
+            <option value="三元锂" ${defaultType === '三元锂' ? 'selected' : ''}>三元锂</option>
+            <option value="磷酸铁锂" ${defaultType === '磷酸铁锂' ? 'selected' : ''}>磷酸铁锂</option>
+            <option value="锰酸锂" ${defaultType === '锰酸锂' ? 'selected' : ''}>锰酸锂</option>
           </select>
         </div>
         <div class="form-item">
           <label>电芯型号 <span style="color: #ff4466;">*</span></label>
-          <input type="text" id="new-cellmodel" value="LFP-280" placeholder="请输入电芯型号">
+          <input type="text" id="new-cellmodel" placeholder="请输入电芯型号">
         </div>
         <div class="form-item">
-          <label>电芯配方</label>
+          <label>电芯配方 <span style="color: #ff4466;">*</span></label>
           <select id="new-formula">
             ${formulaOptions}
           </select>
@@ -315,7 +330,7 @@ function showCreateModal() {
         </div>
         <div class="form-item">
           <label>标称电压(V) <span style="color: #ff4466;">*</span></label>
-          <input type="number" id="new-voltage" value="3.2" step="0.01">
+          <input type="number" id="new-voltage" value="3.7" step="0.01">
         </div>
         <div class="form-item">
           <label>出厂SOH(%) <span style="color: #ff4466;">*</span></label>
@@ -323,7 +338,7 @@ function showCreateModal() {
         </div>
         <div class="form-item">
           <label>出厂循环次数</label>
-          <input type="number" id="new-factorycycles" value="3" min="0">
+          <input type="number" id="new-factorycycles" value="0" min="0">
         </div>
         <div class="form-item">
           <label>生产批次 <span style="color: #ff4466;">*</span></label>
@@ -344,7 +359,7 @@ function showCreateModal() {
       </div>
       
       <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 14px;">
-        <h4 style="margin-bottom: 10px; color: var(--accent-primary); font-size: 14px;">化成数据（选填）</h4>
+        <h4 style="margin-bottom: 10px; color: var(--accent-primary); font-size: 14px;">化成数据</h4>
         <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
           <div class="form-item">
             <label style="font-size: 12px;">首充容量(Ah)</label>
@@ -362,12 +377,47 @@ function showCreateModal() {
             <label style="font-size: 12px;">化成时间(h)</label>
             <input type="number" id="new-f-time" step="0.1" value="24">
           </div>
+          <div class="form-item">
+            <label style="font-size: 12px;">化成温度(°C)</label>
+            <input type="number" id="new-f-temp" step="0.1" value="45">
+          </div>
+          <div class="form-item">
+            <label style="font-size: 12px;">老化时间(h)</label>
+            <input type="number" id="new-f-aging" step="0.1" value="72">
+          </div>
+          <div class="form-item">
+            <label style="font-size: 12px;">老化后电压(V)</label>
+            <input type="number" id="new-f-agingv" step="0.001" value="3.65">
+          </div>
+          <div class="form-item">
+            <label style="font-size: 12px;">自放电率(%/月)</label>
+            <input type="number" id="new-f-selfd" step="0.01" value="1.5">
+          </div>
         </div>
       </div>
       
       <div style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 14px;">
-        <h4 style="margin-bottom: 10px; color: var(--accent-primary); font-size: 14px;">出厂检测（选填）</h4>
+        <h4 style="margin-bottom: 10px; color: var(--accent-primary); font-size: 14px;">出厂检测报告</h4>
         <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
+          <div class="form-item">
+            <label style="font-size: 12px;">报告编号</label>
+            <input type="text" id="new-ins-reportno" value="QC-${new Date().toISOString().slice(0,10).replace(/-/g, '')}-001">
+          </div>
+          <div class="form-item">
+            <label style="font-size: 12px;">检测日期</label>
+            <input type="date" id="new-ins-date" value="${new Date().toISOString().split('T')[0]}">
+          </div>
+          <div class="form-item">
+            <label style="font-size: 12px;">检测员</label>
+            <input type="text" id="new-ins-inspector" value="${currentUser ? currentUser.name : '质检员'}">
+          </div>
+          <div class="form-item">
+            <label style="font-size: 12px;">综合判定</label>
+            <select id="new-ins-overall">
+              <option value="合格">合格</option>
+              <option value="不合格">不合格</option>
+            </select>
+          </div>
           <div class="form-item">
             <label style="font-size: 12px;">外观检测</label>
             <select id="new-ins-appearance">
@@ -390,8 +440,30 @@ function showCreateModal() {
             </select>
           </div>
           <div class="form-item">
-            <label style="font-size: 12px;">综合判定</label>
-            <select id="new-ins-overall">
+            <label style="font-size: 12px;">内阻检测(mΩ)</label>
+            <input type="number" id="new-ins-resistance" step="0.01" value="0.85">
+          </div>
+          <div class="form-item">
+            <label style="font-size: 12px;">耐压检测</label>
+            <select id="new-ins-withstand">
+              <option value="合格">合格</option>
+              <option value="不合格">不合格</option>
+            </select>
+          </div>
+          <div class="form-item">
+            <label style="font-size: 12px;">BMS检测</label>
+            <select id="new-ins-bms">
+              <option value="合格">合格</option>
+              <option value="不合格">不合格</option>
+            </select>
+          </div>
+          <div class="form-item">
+            <label style="font-size: 12px;">充放电循环(次)</label>
+            <input type="number" id="new-ins-cycle" value="100">
+          </div>
+          <div class="form-item">
+            <label style="font-size: 12px;">高低温测试</label>
+            <select id="new-ins-temp">
               <option value="合格">合格</option>
               <option value="不合格">不合格</option>
             </select>
@@ -407,22 +479,40 @@ function showCreateModal() {
   `);
 }
 
+function updateFormulaOptions() {
+  const type = document.getElementById('new-type').value;
+  const select = document.getElementById('new-formula');
+  if (!select || !batteryMeta) return;
+  
+  const formulas = batteryMeta.cellFormulas[type] || [];
+  select.innerHTML = formulas.map(f => `<option value="${f}">${f}</option>`).join('');
+}
+
 function createBattery() {
   const formationData = {
-    firstChargeCapacity: document.getElementById('new-fc-capacity').value,
-    firstDischargeCapacity: document.getElementById('new-fd-capacity').value,
-    firstEfficiency: document.getElementById('new-f-efficiency').value,
-    formationTime: document.getElementById('new-f-time').value
+    firstChargeCapacity: parseFloat(document.getElementById('new-fc-capacity').value) || 0,
+    firstDischargeCapacity: parseFloat(document.getElementById('new-fd-capacity').value) || 0,
+    firstEfficiency: parseFloat(document.getElementById('new-f-efficiency').value) || 0,
+    formationTime: parseFloat(document.getElementById('new-f-time').value) || 0,
+    formationTemp: parseFloat(document.getElementById('new-f-temp').value) || 0,
+    agingTime: parseFloat(document.getElementById('new-f-aging').value) || 0,
+    agingVoltage: parseFloat(document.getElementById('new-f-agingv').value) || 0,
+    selfDischarge: parseFloat(document.getElementById('new-f-selfd').value) || 0
   };
   
   const inspectionReport = {
+    reportNo: document.getElementById('new-ins-reportno').value,
+    inspectionDate: document.getElementById('new-ins-date').value,
+    inspector: document.getElementById('new-ins-inspector').value,
     appearance: document.getElementById('new-ins-appearance').value,
     insulation: document.getElementById('new-ins-insulation').value,
     capacityTest: document.getElementById('new-ins-capacity').value,
-    overallResult: document.getElementById('new-ins-overall').value,
-    inspector: currentUser ? currentUser.name : '系统',
-    inspectionDate: new Date().toISOString().split('T')[0],
-    reportNo: 'INSP-' + Date.now()
+    internalResistance: parseFloat(document.getElementById('new-ins-resistance').value) || 0,
+    withstandVoltage: document.getElementById('new-ins-withstand').value,
+    bmsTest: document.getElementById('new-ins-bms').value,
+    cycleTest: parseInt(document.getElementById('new-ins-cycle').value) || 0,
+    tempTest: document.getElementById('new-ins-temp').value,
+    overallResult: document.getElementById('new-ins-overall').value
   };
   
   const data = {

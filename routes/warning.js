@@ -1,13 +1,21 @@
 const express = require('express');
 const { warnings, batteries } = require('../data/store');
-const { authenticateToken } = require('./auth');
+const { authenticateToken, requirePermission, hasPermission, filterByFactory } = require('./auth');
 
 const router = express.Router();
 
 router.get('/', authenticateToken, (req, res) => {
+  if (!hasPermission(req.user, 'warning:read') && !hasPermission(req.user, 'warning:read_own')) {
+    return res.status(403).json({ code: 403, message: '权限不足，需要预警读取权限' });
+  }
+  
   const { page = 1, pageSize = 20, level, status, batteryId } = req.query;
   
   let filtered = [...warnings];
+  
+  const accessibleBatteries = filterByFactory(req, batteries);
+  const accessibleBatteryIds = accessibleBatteries.map(b => b.batteryId);
+  filtered = filtered.filter(w => accessibleBatteryIds.includes(w.batteryId));
   
   if (level) {
     filtered = filtered.filter(w => w.level === level);
@@ -36,16 +44,24 @@ router.get('/', authenticateToken, (req, res) => {
 });
 
 router.get('/stats', authenticateToken, (req, res) => {
+  if (!hasPermission(req.user, 'warning:read') && !hasPermission(req.user, 'warning:read_own')) {
+    return res.status(403).json({ code: 403, message: '权限不足，需要预警读取权限' });
+  }
+  
+  const accessibleBatteries = filterByFactory(req, batteries);
+  const accessibleBatteryIds = accessibleBatteries.map(b => b.batteryId);
+  const filteredWarnings = warnings.filter(w => accessibleBatteryIds.includes(w.batteryId));
+  
   const today = new Date().toDateString();
-  const todayWarnings = warnings.filter(w => new Date(w.timestamp).toDateString() === today);
+  const todayWarnings = filteredWarnings.filter(w => new Date(w.timestamp).toDateString() === today);
   
   const stats = {
-    total: warnings.length,
+    total: filteredWarnings.length,
     today: todayWarnings.length,
-    unhandled: warnings.filter(w => w.status === 'pending').length,
-    level1: warnings.filter(w => w.level === 'normal').length,
-    level2: warnings.filter(w => w.level === 'urgent').length,
-    level3: warnings.filter(w => w.level === 'critical').length
+    unhandled: filteredWarnings.filter(w => w.status === 'pending').length,
+    level1: filteredWarnings.filter(w => w.level === 'normal').length,
+    level2: filteredWarnings.filter(w => w.level === 'urgent').length,
+    level3: filteredWarnings.filter(w => w.level === 'critical').length
   };
   
   res.json({
@@ -54,7 +70,7 @@ router.get('/stats', authenticateToken, (req, res) => {
   });
 });
 
-router.post('/:id/handle', authenticateToken, (req, res) => {
+router.post('/:id/handle', authenticateToken, requirePermission('warning:handle'), (req, res) => {
   const { id } = req.params;
   const { result, handler } = req.body;
   
@@ -77,6 +93,10 @@ router.post('/:id/handle', authenticateToken, (req, res) => {
 });
 
 router.get('/rules', authenticateToken, (req, res) => {
+  if (!hasPermission(req.user, 'warning:read') && !hasPermission(req.user, 'warning:read_own')) {
+    return res.status(403).json({ code: 403, message: '权限不足，需要预警读取权限' });
+  }
+  
   const rules = [
     { id: 1, name: '温度突升', condition: '温度变化率 > 3℃/min', level: 'critical', enabled: true },
     { id: 2, name: '单体压差过大', condition: '单体压差 > 0.1V', level: 'urgent', enabled: true },

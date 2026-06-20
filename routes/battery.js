@@ -237,23 +237,33 @@ router.post('/', authenticateToken, requirePermission('battery:create'), (req, r
   
   const formationData = generateFormationData(batteryType);
   formationData.formationDate = productionDate;
-  if (formationInput) {
-    Object.assign(formationData, formationInput);
+  if (formationInput && typeof formationInput === 'object') {
+    Object.keys(formationInput).forEach(key => {
+      if (formationInput[key] !== undefined && formationInput[key] !== null && formationInput[key] !== '') {
+        formationData[key] = formationInput[key];
+      }
+    });
   }
   
   const inspectionReport = generateInspectionReport();
   inspectionReport.reportNo = `QC-${factoryCode}-${dateStr}-${serial.substring(4)}`;
   inspectionReport.inspectionDate = productionDate;
-  if (inspectionItems) {
-    inspectionReport.items = inspectionItems;
-    const allPassed = inspectionItems.every(i => i.result === 'passed');
-    inspectionReport.overallResult = allPassed ? 'passed' : 'failed';
-    inspectionReport.conclusion = allPassed ? '出厂检验合格，准予出厂' : '出厂检验不合格，不予出厂';
+  if (req.body.inspectionReport && typeof req.body.inspectionReport === 'object') {
+    const inputReport = req.body.inspectionReport;
+    Object.keys(inputReport).forEach(key => {
+      if (inputReport[key] !== undefined && inputReport[key] !== null && inputReport[key] !== '') {
+        inspectionReport[key] = inputReport[key];
+      }
+    });
+    inspectionReport.conclusion = inspectionReport.overallResult === '合格' || inspectionReport.overallResult === 'passed' 
+      ? '出厂检验合格，准予出厂' 
+      : '出厂检验不合格，不予出厂';
   }
   
   let soh = factorySoh;
   if (soh === undefined || soh === null) {
-    soh = inspectionReport.overallResult === 'passed' ? 100 : 95;
+    const isPassed = inspectionReport.overallResult === 'passed' || inspectionReport.overallResult === '合格';
+    soh = isPassed ? 100 : 95;
   }
   
   const newBattery = {
@@ -279,6 +289,7 @@ router.post('/', authenticateToken, requirePermission('battery:create'), (req, r
     packWeight: (parseFloat(ratedCapacity) * 1.5).toFixed(1),
     
     batchNo,
+    productionBatch: batchNo,
     productionLine: productionLine || 'Line-01',
     workOrderNo: workOrderNo || `WO${dateStr}${serial.substring(2)}`,
     
@@ -293,7 +304,9 @@ router.post('/', authenticateToken, requirePermission('battery:create'), (req, r
     nfcId,
     qrCode,
     signature,
+    digitalSignature: signature,
     verifyStatus: 'verified',
+    inspectionStatus: 'qualified',
     
     vin: null,
     oemCode: null,

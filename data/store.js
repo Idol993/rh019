@@ -456,7 +456,7 @@ const users = [
     role: 'factory', 
     name: '宁德时代北京工厂', 
     tenant: 'CATLBJ',
-    permissions: ['battery:create', 'battery:read_own', 'battery:update_own', 'monitor:read_own', 'dashboard:read'],
+    permissions: ['battery:create', 'battery:read_own', 'battery:update_own', 'monitor:read_own', 'warning:read_own', 'trace:read_own', 'dashboard:read'],
     menus: ['dashboard', 'battery', 'monitor', 'trace', 'warning']
   },
   { 
@@ -466,7 +466,7 @@ const users = [
     role: 'factory', 
     name: '比亚迪深圳工厂', 
     tenant: 'BYDSZN',
-    permissions: ['battery:create', 'battery:read_own', 'battery:update_own', 'monitor:read_own', 'dashboard:read'],
+    permissions: ['battery:create', 'battery:read_own', 'battery:update_own', 'monitor:read_own', 'warning:read_own', 'trace:read_own', 'dashboard:read'],
     menus: ['dashboard', 'battery', 'monitor', 'trace', 'warning']
   },
   { 
@@ -476,7 +476,7 @@ const users = [
     role: 'oem', 
     name: '比亚迪汽车', 
     tenant: 'BYD',
-    permissions: ['battery:bind_vin', 'battery:read', 'monitor:read', 'warning:handle', 'dashboard:read', 'trace:read'],
+    permissions: ['battery:bind_vin', 'battery:read', 'monitor:read', 'warning:read', 'warning:handle', 'dashboard:read', 'trace:read'],
     menus: ['dashboard', 'battery', 'monitor', 'trace', 'warning']
   },
   { 
@@ -486,7 +486,7 @@ const users = [
     role: 'recycler', 
     name: '格林美回收', 
     tenant: 'GEM',
-    permissions: ['recycle:verify', 'recycle:dismantle', 'recycle:echelon', 'battery:read', 'trace:read', 'dashboard:read'],
+    permissions: ['recycle:read', 'recycle:verify', 'recycle:dismantle', 'recycle:echelon', 'battery:read', 'trace:read', 'dashboard:read'],
     menus: ['dashboard', 'battery', 'trace', 'recycle']
   },
   { 
@@ -518,13 +518,24 @@ const mockBatteries = generateMockBatteries();
 mockBatteries.filter(b => b.status === 'dismantled' && b.dismantleData).forEach(b => {
   dismantleOrders.push({
     id: b.dismantleData.orderNo,
+    orderNo: b.dismantleData.orderNo,
     batteryId: b.batteryId,
     batteryType: b.batteryType,
+    batteryModel: b.cellModel,
+    type: 'dismantle',
     status: 'completed',
     createTime: b.dismantleData.dismantleDate + 'T09:00:00.000Z',
     completeTime: b.dismantleData.dismantleDate + 'T17:00:00.000Z',
     recycler: b.dismantleData.recycler,
-    data: b.dismantleData
+    recyclerCode: 'GEM',
+    operator: b.dismantleData.dismantler,
+    batteryInfo: {
+      ratedCapacity: b.ratedCapacity,
+      currentSoh: b.currentSoh,
+      cycles: b.cycles,
+      packWeight: b.packWeight
+    },
+    dismantleData: b.dismantleData
   });
 });
 

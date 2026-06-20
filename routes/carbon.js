@@ -57,7 +57,7 @@ const calculateCarbonFootprint = (battery) => {
   };
 };
 
-router.get('/summary', authenticateToken, (req, res) => {
+router.get('/summary', authenticateToken, requirePermission('carbon:read'), (req, res) => {
   let targetBatteries = [...batteries];
   targetBatteries = filterByFactory(req, targetBatteries);
   
@@ -105,7 +105,7 @@ router.get('/summary', authenticateToken, (req, res) => {
   });
 });
 
-router.get('/trend', authenticateToken, (req, res) => {
+router.get('/trend', authenticateToken, requirePermission('carbon:read'), (req, res) => {
   const months = 12;
   const data = [];
   
@@ -137,7 +137,7 @@ router.get('/trend', authenticateToken, (req, res) => {
   });
 });
 
-router.get('/battery/:batteryId', authenticateToken, (req, res) => {
+router.get('/battery/:batteryId', authenticateToken, requirePermission('carbon:read'), (req, res) => {
   const { batteryId } = req.params;
   const battery = batteries.find(b => b.batteryId === batteryId);
   
@@ -153,7 +153,7 @@ router.get('/battery/:batteryId', authenticateToken, (req, res) => {
   });
 });
 
-router.get('/distribution', authenticateToken, (req, res) => {
+router.get('/distribution', authenticateToken, requirePermission('carbon:read'), (req, res) => {
   let targetBatteries = [...batteries];
   targetBatteries = filterByFactory(req, targetBatteries);
   
@@ -181,7 +181,7 @@ router.get('/distribution', authenticateToken, (req, res) => {
   });
 });
 
-router.get('/reports', authenticateToken, (req, res) => {
+router.get('/reports', authenticateToken, requirePermission('carbon:read'), (req, res) => {
   const { type, year } = req.query;
   
   let targetBatteries = [...batteries];
@@ -238,7 +238,7 @@ router.get('/reports', authenticateToken, (req, res) => {
   });
 });
 
-router.get('/report/:reportId', authenticateToken, (req, res) => {
+router.get('/report/:reportId', authenticateToken, requirePermission('carbon:read'), (req, res) => {
   const { reportId } = req.params;
   
   let targetBatteries = [...batteries];
@@ -304,7 +304,7 @@ router.get('/report/:reportId', authenticateToken, (req, res) => {
   });
 });
 
-router.get('/report/:reportId/html', authenticateToken, (req, res) => {
+router.get('/report/:reportId/html', authenticateToken, requirePermission('carbon:read'), (req, res) => {
   const { reportId } = req.params;
   
   let targetBatteries = [...batteries];
@@ -514,7 +514,7 @@ router.get('/report/:reportId/html', authenticateToken, (req, res) => {
   res.send(html);
 });
 
-router.post('/calculate', authenticateToken, (req, res) => {
+router.post('/calculate', authenticateToken, requirePermission('carbon:read'), (req, res) => {
   const { batteryId, scope = 'full' } = req.body;
   
   if (!batteryId) {

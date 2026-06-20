@@ -25,7 +25,7 @@ const generateDismantleOrderNo = () => {
   return `DM${date}${String(dismantleOrderCounter).padStart(6, '0')}`;
 };
 
-router.get('/orders', authenticateToken, (req, res) => {
+router.get('/orders', authenticateToken, requirePermission('recycle:read'), (req, res) => {
   const { page = 1, pageSize = 20, status, type, batteryId } = req.query;
   
   let filtered = [...dismantleOrders];
@@ -336,11 +336,21 @@ router.post('/dismantle', authenticateToken, requirePermission('recycle:dismantl
       orderNo: dismantleData.orderNo,
       batteryId,
       batteryType: battery.batteryType,
+      batteryModel: battery.cellModel,
+      type: 'dismantle',
       status: 'completed',
       createTime: new Date().toISOString(),
       completeTime: new Date().toISOString(),
       recycler: req.user.name,
-      data: dismantleData
+      recyclerCode: req.user.tenant,
+      operator: req.user.name,
+      batteryInfo: {
+        ratedCapacity: battery.ratedCapacity,
+        currentSoh: battery.currentSoh,
+        cycles: battery.cycles,
+        packWeight: battery.packWeight
+      },
+      dismantleData
     });
   }
   
@@ -362,7 +372,7 @@ router.post('/dismantle', authenticateToken, requirePermission('recycle:dismantl
   });
 });
 
-router.get('/dismantle/:orderNo', authenticateToken, (req, res) => {
+router.get('/dismantle/:orderNo', authenticateToken, requirePermission('recycle:read'), (req, res) => {
   const { orderNo } = req.params;
   const order = dismantleOrders.find(o => o.orderNo === orderNo);
   
@@ -381,7 +391,7 @@ router.get('/dismantle/:orderNo', authenticateToken, (req, res) => {
   });
 });
 
-router.post('/retire-assess', authenticateToken, (req, res) => {
+router.post('/retire-assess', authenticateToken, requirePermission('recycle:read'), (req, res) => {
   const { batteryId } = req.body;
   
   if (!batteryId) {
@@ -468,7 +478,7 @@ router.post('/retire-assess', authenticateToken, (req, res) => {
   });
 });
 
-router.get('/echelon-projects', authenticateToken, (req, res) => {
+router.get('/echelon-projects', authenticateToken, requirePermission('recycle:read'), (req, res) => {
   const { status, type } = req.query;
   
   let filtered = [...echelonProjects];
@@ -491,7 +501,7 @@ router.get('/echelon-projects', authenticateToken, (req, res) => {
   });
 });
 
-router.get('/stats', authenticateToken, (req, res) => {
+router.get('/stats', authenticateToken, requirePermission('recycle:read'), (req, res) => {
   const total = batteries.length;
   const dismantled = batteries.filter(b => b.status === 'dismantled').length;
   const echelon = batteries.filter(b => b.status === 'echelon').length;
