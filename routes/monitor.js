@@ -1,20 +1,28 @@
 const express = require('express');
 const { batteries, historyData, generateMockHistoryData } = require('../data/store');
-const { authenticateToken } = require('./auth');
+const { 
+  authenticateToken, 
+  requirePermission,
+  filterByFactory,
+  canAccessBattery
+} = require('./auth');
 
 const router = express.Router();
 
 router.get('/realtime', authenticateToken, (req, res) => {
   const { batteryIds } = req.query;
   
-  let targetBatteries = batteries;
+  let targetBatteries = [...batteries];
+  
+  targetBatteries = filterByFactory(req, targetBatteries);
+  
   if (batteryIds) {
     const ids = batteryIds.split(',');
-    targetBatteries = batteries.filter(b => ids.includes(b.batteryId));
+    targetBatteries = targetBatteries.filter(b => ids.includes(b.batteryId));
   }
   
   const realtimeData = targetBatteries
-    .filter(b => b.status === 'running' || b.status === 'charging' || b.status === 'idle')
+    .filter(b => ['running', 'charging', 'idle', 'factory'].includes(b.status))
     .map(b => ({
       batteryId: b.batteryId,
       vin: b.vin,
@@ -32,12 +40,66 @@ router.get('/realtime', authenticateToken, (req, res) => {
       insulationResistance: b.insulationResistance,
       cycles: b.cycles,
       location: b.location,
+      factoryCode: b.factoryCode,
+      vehicleModel: b.vehicleModel,
       timestamp: new Date().toISOString()
     }));
   
   res.json({
     code: 200,
     data: realtimeData
+  });
+});
+
+router.get('/:batteryId/latest', authenticateToken, (req, res) => {
+  const { batteryId } = req.params;
+  const battery = batteries.find(b => b.batteryId === batteryId);
+  
+  if (!battery) {
+    return res.status(404).json({ code: 404, message: '电池不存在' });
+  }
+  
+  if (!canAccessBattery(req, battery)) {
+    return res.status(403).json({ code: 403, message: '无权限访问该电池数据' });
+  }
+  
+  const latestData = {
+    batteryId: battery.batteryId,
+    vin: battery.vin,
+    vehicleModel: battery.vehicleModel,
+    status: battery.status,
+    soc: battery.soc,
+    soh: battery.currentSoh,
+    voltage: battery.totalVoltage,
+    totalVoltage: battery.totalVoltage,
+    current: battery.totalCurrent,
+    totalCurrent: battery.totalCurrent,
+    temperature: battery.maxTemp,
+    maxTemp: battery.maxTemp,
+    minTemp: battery.minTemp,
+    tempDiff: battery.tempDiff,
+    maxCellVoltage: battery.maxCellVoltage,
+    minCellVoltage: battery.minCellVoltage,
+    voltageDiff: battery.voltageDiff,
+    insulationResistance: battery.insulationResistance,
+    cycles: battery.cycles,
+    faultCodes: battery.faultCodes,
+    faultCount: battery.faultCount,
+    location: battery.location,
+    bmsHardwareVersion: battery.bmsHardwareVersion,
+    bmsSoftwareVersion: battery.bmsSoftwareVersion,
+    factoryCode: battery.factoryCode,
+    factoryName: battery.factoryName,
+    cellModel: battery.cellModel,
+    cellFormula: battery.cellFormula,
+    ratedCapacity: battery.ratedCapacity,
+    packWeight: battery.packWeight,
+    timestamp: new Date().toISOString()
+  };
+  
+  res.json({
+    code: 200,
+    data: latestData
   });
 });
 
@@ -50,13 +112,17 @@ router.get('/:batteryId/history', authenticateToken, (req, res) => {
     return res.status(404).json({ code: 404, message: '电池不存在' });
   }
   
+  if (!canAccessBattery(req, battery)) {
+    return res.status(403).json({ code: 403, message: '无权限访问该电池数据' });
+  }
+  
   if (!historyData[batteryId]) {
     historyData[batteryId] = generateMockHistoryData(batteryId, parseInt(days));
   }
   
   let data = historyData[batteryId];
+  
   if (type === 'daily') {
-    const dailyData = [];
     const dayMap = {};
     data.forEach(d => {
       const day = new Date(d.timestamp).toDateString();
@@ -65,59 +131,56 @@ router.get('/:batteryId/history', authenticateToken, (req, res) => {
       }
       dayMap[day].push(d);
     });
-    Object.keys(dayMap).forEach(day => {
+    
+    const dailyData = Object.keys(dayMap).map(day => {
       const dayData = dayMap[day];
-      dailyData.push({
+      return {
         timestamp: new Date(day).getTime(),
+        date: day,
         batteryId,
         avgSoc: (dayData.reduce((sum, d) => sum + parseFloat(d.soc), 0) / dayData.length).toFixed(1),
         avgSoh: (dayData.reduce((sum, d) => sum + parseFloat(d.soh), 0) / dayData.length).toFixed(2),
         maxTemp: Math.max(...dayData.map(d => parseFloat(d.maxTemp))).toFixed(1),
         minTemp: Math.min(...dayData.map(d => parseFloat(d.minTemp))).toFixed(1),
-        chargingCount: dayData.filter(d => d.status === 'charging').length,
-        runningHours: (dayData.filter(d => d.status === 'running').length).toFixed(1)
-      });
+        avgVoltage: (dayData.reduce((sum, d) => sum + parseFloat(d.totalVoltage), 0) / dayData.length).toFixed(1),
+        chargingHours: (dayData.filter(d => d.status === 'charging').length / 6).toFixed(1),
+        runningHours: (dayData.filter(d => d.status === 'running').length / 6).toFixed(1),
+        avgMileage: dayData.length > 0 ? dayData[dayData.length - 1].mileage : 0
+      };
     });
+    
     data = dailyData;
   }
   
+  const limit = parseInt(days) * 24;
+  const resultData = data.slice(-limit);
+  
   res.json({
     code: 200,
-    data: data.slice(-parseInt(days) * 24),
-    total: data.length
+    data: resultData,
+    total: resultData.length
   });
 });
 
-router.get('/:batteryId/latest', authenticateToken, (req, res) => {
+router.get('/:batteryId/alarms', authenticateToken, (req, res) => {
   const { batteryId } = req.params;
-  const battery = batteries.find(b => b.batteryId === batteryId);
+  const { warnings } = require('../data/store');
   
+  const battery = batteries.find(b => b.batteryId === batteryId);
   if (!battery) {
     return res.status(404).json({ code: 404, message: '电池不存在' });
   }
   
+  if (!canAccessBattery(req, battery)) {
+    return res.status(403).json({ code: 403, message: '无权限访问该电池数据' });
+  }
+  
+  const batteryWarnings = warnings.filter(w => w.batteryId === batteryId);
+  
   res.json({
     code: 200,
-    data: {
-      batteryId: b.batteryId,
-      vin: b.vin,
-      status: b.status,
-      soc: b.soc,
-      soh: b.currentSoh,
-      totalVoltage: b.totalVoltage,
-      totalCurrent: b.totalCurrent,
-      maxTemp: b.maxTemp,
-      minTemp: b.minTemp,
-      tempDiff: b.tempDiff,
-      maxCellVoltage: b.maxCellVoltage,
-      minCellVoltage: b.minCellVoltage,
-      voltageDiff: b.voltageDiff,
-      insulationResistance: b.insulationResistance,
-      cycles: b.cycles,
-      faultCodes: b.faultCodes,
-      location: b.location,
-      timestamp: new Date().toISOString()
-    }
+    data: batteryWarnings,
+    total: batteryWarnings.length
   });
 });
 

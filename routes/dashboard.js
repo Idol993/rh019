@@ -21,6 +21,21 @@ router.get('/overview', authenticateToken, (req, res) => {
   
   const avgSoh = batteries.reduce((sum, b) => sum + parseFloat(b.currentSoh), 0) / totalBatteries;
   
+  const totalCarbonReduction = batteries
+    .filter(b => b.dismantleData)
+    .reduce((sum, b) => sum + (b.dismantleData.carbonReductionKg || 0), 0);
+  
+  const totalLithiumRecovered = batteries
+    .filter(b => b.dismantleData)
+    .reduce((sum, b) => {
+      const weight = parseFloat(b.dismantleData.netWeight || 0);
+      const rate = parseFloat(b.dismantleData.lithiumRecovery || 0) / 100;
+      return sum + weight * rate * 0.05;
+    }, 0);
+  
+  const echelonCarbonReduction = echelonBatteries * 150;
+  const totalCarbonReductionAll = totalCarbonReduction + echelonCarbonReduction;
+  
   const data = {
     totalBatteries,
     onlineBatteries: activeBatteries,
@@ -36,7 +51,11 @@ router.get('/overview', authenticateToken, (req, res) => {
     criticalWarnings: warnings.filter(w => w.level === 'critical' && w.status === 'pending').length,
     avgSoh: avgSoh.toFixed(2) + '%',
     totalCycles: batteries.reduce((sum, b) => sum + b.cycles, 0),
-    carbonReduction: (dismantledBatteries * 200 + echelonBatteries * 150).toFixed(0) + ' kgCO₂e'
+    carbonReduction: totalCarbonReductionAll.toFixed(0) + ' kgCO₂e',
+    recyclingCarbonReduction: totalCarbonReduction.toFixed(0) + ' kgCO₂e',
+    echelonCarbonReduction: echelonCarbonReduction.toFixed(0) + ' kgCO₂e',
+    totalLithiumRecovered: totalLithiumRecovered.toFixed(2) + ' kg',
+    recyclingRate: ((dismantledBatteries / Math.max(1, retiredBatteries + echelonBatteries + dismantledBatteries)) * 100).toFixed(1) + '%'
   };
   
   res.json({

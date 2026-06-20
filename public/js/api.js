@@ -72,6 +72,9 @@ const api = {
     detail(id) {
       return api.get(`/battery/${id}`);
     },
+    meta() {
+      return api.get('/battery/meta');
+    },
     create(data) {
       return api.post('/battery', data);
     },
@@ -80,6 +83,11 @@ const api = {
     },
     traceability(id) {
       return api.get(`/battery/${id}/traceability`);
+    },
+    exportCsv(params) {
+      const token = localStorage.getItem('token');
+      const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+      return `/api/battery/export/csv${queryString}${params ? '&' : '?'}token=${encodeURIComponent(token)}`;
     }
   },
   
@@ -114,6 +122,12 @@ const api = {
     orders(params) {
       return api.get('/recycle/orders', params);
     },
+    orderDetail(orderNo) {
+      return api.get(`/recycle/dismantle/${orderNo}`);
+    },
+    createOrder(data) {
+      return api.post('/recycle/dismantle-order', data);
+    },
     verify(data) {
       return api.post('/recycle/verify', data);
     },
@@ -125,6 +139,9 @@ const api = {
     },
     dismantle(data) {
       return api.post('/recycle/dismantle', data);
+    },
+    stats() {
+      return api.get('/recycle/stats');
     }
   },
   
@@ -135,8 +152,27 @@ const api = {
     summary(params) {
       return api.get('/carbon/summary', params);
     },
-    report(batteryId) {
-      return api.get(`/carbon/report/${batteryId}`);
+    trend(params) {
+      return api.get('/carbon/trend', params);
+    },
+    distribution() {
+      return api.get('/carbon/distribution');
+    },
+    battery(batteryId) {
+      return api.get(`/carbon/battery/${batteryId}`);
+    },
+    reports(params) {
+      return api.get('/carbon/reports', params);
+    },
+    report(reportId) {
+      return api.get(`/carbon/report/${reportId}`);
+    },
+    reportHtmlUrl(reportId) {
+      const token = localStorage.getItem('token');
+      return `/api/carbon/report/${reportId}/html?token=${encodeURIComponent(token)}`;
+    },
+    calculate(data) {
+      return api.post('/carbon/calculate', data);
     }
   },
   

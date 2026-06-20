@@ -76,36 +76,7 @@
     </header>
 
     <nav class="nav-sidebar">
-      <ul class="nav-menu">
-        <li class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')">
-          <span class="nav-icon">📊</span>
-          <span class="nav-text">监管大屏</span>
-        </li>
-        <li class="nav-item" data-page="battery" onclick="switchPage('battery')">
-          <span class="nav-icon">🔋</span>
-          <span class="nav-text">电池档案</span>
-        </li>
-        <li class="nav-item" data-page="monitor" onclick="switchPage('monitor')">
-          <span class="nav-icon">📡</span>
-          <span class="nav-text">实时监控</span>
-        </li>
-        <li class="nav-item" data-page="trace" onclick="switchPage('trace')">
-          <span class="nav-icon">🔗</span>
-          <span class="nav-text">溯源追踪</span>
-        </li>
-        <li class="nav-item" data-page="warning" onclick="switchPage('warning')">
-          <span class="nav-icon">⚠️</span>
-          <span class="nav-text">安全预警</span>
-          <span class="nav-badge" id="warning-badge">0</span>
-        </li>
-        <li class="nav-item" data-page="recycle" onclick="switchPage('recycle')">
-          <span class="nav-icon">♻️</span>
-          <span class="nav-text">回收梯次</span>
-        </li>
-        <li class="nav-item" data-page="carbon" onclick="switchPage('carbon')">
-          <span class="nav-icon">🌱</span>
-          <span class="nav-text">碳核算</span>
-        </li>
+      <ul class="nav-menu" id="nav-menu">
       </ul>
     </nav>
 
@@ -232,8 +203,8 @@
         <div class="page-header">
           <h2>电池档案管理</h2>
           <div class="page-actions">
-            <button class="btn btn-primary" onclick="showCreateModal()">+ 新建电池</button>
-            <button class="btn btn-secondary" onclick="exportData()">导出数据</button>
+            <button class="btn btn-primary" id="btn-create-battery" onclick="showCreateModal()">+ 新建电池</button>
+            <button class="btn btn-secondary" id="btn-export-battery" onclick="exportBatteries()">导出数据</button>
           </div>
         </div>
         <div class="filter-bar">
@@ -241,6 +212,7 @@
             <label>电池状态</label>
             <select id="filter-status" onchange="loadBatteries()">
               <option value="">全部</option>
+              <option value="factory">出厂</option>
               <option value="running">运行中</option>
               <option value="charging">充电中</option>
               <option value="idle">待机</option>
@@ -259,6 +231,12 @@
             </select>
           </div>
           <div class="filter-item">
+            <label>生产工厂</label>
+            <select id="filter-factory" onchange="loadBatteries()">
+              <option value="">全部工厂</option>
+            </select>
+          </div>
+          <div class="filter-item">
             <label>关键词</label>
             <input type="text" id="filter-keyword" placeholder="电池ID/VIN/车型" onkeyup="if(event.key==='Enter')loadBatteries()">
           </div>
@@ -269,13 +247,14 @@
             <thead>
               <tr>
                 <th>电池ID</th>
+                <th>电芯型号</th>
                 <th>电池类型</th>
                 <th>额定容量</th>
                 <th>当前SOH</th>
                 <th>循环次数</th>
                 <th>VIN码</th>
                 <th>状态</th>
-                <th>所属区域</th>
+                <th>生产工厂</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -505,50 +484,21 @@
         </div>
 
         <div id="tab-dismantle" class="tab-content">
-          <div class="dismantle-form">
-            <h3>拆解记录录入</h3>
-            <form class="form-grid">
-              <div class="form-item">
-                <label>电池ID</label>
-                <input type="text" id="dismantle-battery-id" placeholder="请输入电池ID">
+          <div style="display: flex; gap: 20px; height: calc(100vh - 220px);">
+            <div style="width: 340px; border-right: 1px solid var(--border-color); padding-right: 16px; overflow-y: auto;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 style="margin: 0;">拆解工单</h3>
+                <button class="btn btn-primary btn-sm" id="btn-create-order" onclick="showCreateOrderModal()">+ 新建</button>
               </div>
-              <div class="form-item">
-                <label>电池重量(kg)</label>
-                <input type="number" id="dismantle-weight" placeholder="请输入重量">
+              <div id="dismantle-order-list" style="font-size: 13px;">
+                <div style="text-align:center;padding:40px;color:var(--text-muted);">加载中...</div>
               </div>
-              <div class="form-item">
-                <label>锂回收率</label>
-                <input type="text" id="dismantle-lithium" placeholder="如: 95%">
+            </div>
+            <div style="flex: 1; padding-left: 16px; overflow-y: auto;">
+              <div id="dismantle-detail" style="color: var(--text-muted); text-align: center; padding-top: 60px;">
+                请选择左侧工单查看详情或录入拆解数据
               </div>
-              <div class="form-item">
-                <label>钴回收率</label>
-                <input type="text" id="dismantle-cobalt" placeholder="如: 92%">
-              </div>
-              <div class="form-item">
-                <label>镍回收率</label>
-                <input type="text" id="dismantle-nickel" placeholder="如: 90%">
-              </div>
-              <div class="form-item">
-                <label>锰回收率</label>
-                <input type="text" id="dismantle-manganese" placeholder="如: 88%">
-              </div>
-              <div class="form-item full">
-                <label>废料处置方式</label>
-                <select id="dismantle-disposal">
-                  <option value="">请选择</option>
-                  <option value="safe_disposal">安全填埋</option>
-                  <option value="recycle">回收再利用</option>
-                  <option value="special_treatment">特殊处理</option>
-                </select>
-              </div>
-              <div class="form-item full">
-                <label>环保凭证编号</label>
-                <input type="text" id="dismantle-cert" placeholder="请输入环保凭证编号">
-              </div>
-              <div class="form-item full">
-                <button type="button" class="btn btn-primary" onclick="submitDismantle()">提交拆解记录</button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
 
@@ -580,22 +530,30 @@
       <div id="page-carbon" class="page">
         <div class="page-header">
           <h2>碳足迹核算</h2>
-          <div class="carbon-summary-cards">
-            <div class="carbon-card">
-              <span class="cc-label">总碳排放</span>
-              <span class="cc-value" id="cc-total">0</span>
-              <span class="cc-unit">kgCO₂e</span>
-            </div>
-            <div class="carbon-card reduction">
-              <span class="cc-label">碳减排</span>
-              <span class="cc-value" id="cc-reduction">0</span>
-              <span class="cc-unit">kgCO₂e</span>
-            </div>
-            <div class="carbon-card">
-              <span class="cc-label">净排放</span>
-              <span class="cc-value" id="cc-net">0</span>
-              <span class="cc-unit">kgCO₂e</span>
-            </div>
+          <div class="page-actions">
+            <button class="btn btn-secondary btn-sm" onclick="loadCarbonReports()">刷新报告</button>
+          </div>
+        </div>
+        <div class="carbon-summary-cards" style="margin-bottom: 20px;">
+          <div class="carbon-card">
+            <span class="cc-label">总碳排放</span>
+            <span class="cc-value" id="cc-total">0</span>
+            <span class="cc-unit">kgCO₂e</span>
+          </div>
+          <div class="carbon-card reduction">
+            <span class="cc-label">碳减排</span>
+            <span class="cc-value" id="cc-reduction">0</span>
+            <span class="cc-unit">kgCO₂e</span>
+          </div>
+          <div class="carbon-card">
+            <span class="cc-label">净排放</span>
+            <span class="cc-value" id="cc-net">0</span>
+            <span class="cc-unit">kgCO₂e</span>
+          </div>
+          <div class="carbon-card">
+            <span class="cc-label">平均碳强度</span>
+            <span class="cc-value" id="cc-intensity">0</span>
+            <span class="cc-unit">kg/kWh</span>
           </div>
         </div>
         <div class="carbon-layout">
@@ -622,6 +580,15 @@
             </div>
             <div id="carbon-battery-detail" class="carbon-battery-detail hidden">
             </div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 24px;">
+          <div class="chart-header" style="margin-bottom: 12px;">
+            <h3>📄 核算报告</h3>
+          </div>
+          <div id="carbon-reports-list" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+            <div style="color: var(--text-muted); text-align: center; padding: 30px;">加载中...</div>
           </div>
         </div>
       </div>

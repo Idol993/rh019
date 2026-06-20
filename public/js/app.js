@@ -62,11 +62,63 @@ function initApp() {
   document.getElementById('user-name').textContent = currentUser.username;
   document.getElementById('user-role').textContent = getRoleName(currentUser.role);
   
+  renderMenus();
+  
   updateTime();
   setInterval(updateTime, 1000);
   
   initWebSocket();
-  switchPage('dashboard');
+  
+  const menus = currentUser.menus || ['dashboard', 'battery', 'monitor', 'trace', 'warning', 'recycle', 'carbon'];
+  const firstPage = menus.length > 0 ? menus[0] : 'dashboard';
+  switchPage(firstPage);
+}
+
+function renderMenus() {
+  const menuContainer = document.getElementById('nav-menu');
+  if (!menuContainer) return;
+  
+  const menus = currentUser.menus || ['dashboard', 'battery', 'monitor', 'trace', 'warning', 'recycle', 'carbon'];
+  
+  const menuConfig = {
+    dashboard: { icon: '📊', text: '监管大屏' },
+    battery: { icon: '🔋', text: '电池档案' },
+    monitor: { icon: '📡', text: '实时监控' },
+    trace: { icon: '🔗', text: '溯源追踪' },
+    warning: { icon: '⚠️', text: '安全预警', badge: 'warning-badge' },
+    recycle: { icon: '♻️', text: '回收梯次' },
+    carbon: { icon: '🌱', text: '碳核算' }
+  };
+  
+  menuContainer.innerHTML = '';
+  
+  menus.forEach((menuKey, index) => {
+    const config = menuConfig[menuKey];
+    if (!config) return;
+    
+    const li = document.createElement('li');
+    li.className = 'nav-item';
+    if (index === 0) li.classList.add('active');
+    li.dataset.page = menuKey;
+    li.onclick = () => switchPage(menuKey);
+    
+    let html = `
+      <span class="nav-icon">${config.icon}</span>
+      <span class="nav-text">${config.text}</span>
+    `;
+    if (config.badge) {
+      html += `<span class="nav-badge" id="${config.badge}">0</span>`;
+    }
+    
+    li.innerHTML = html;
+    menuContainer.appendChild(li);
+  });
+  
+  document.querySelectorAll('.page').forEach(p => {
+    if (!menus.includes(p.dataset.page || p.id.replace('page-', ''))) {
+      p.classList.remove('active');
+    }
+  });
 }
 
 function getRoleName(role) {
