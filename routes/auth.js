@@ -73,7 +73,11 @@ const filterByFactory = (req, batteries) => {
 
 const filterByRecycler = (req, orders) => {
   if (req.user.role === 'recycler') {
-    return orders.filter(o => o.recycler === req.user.name || o.recycler === req.user.tenant);
+    return orders.filter(o => 
+      (o.recyclerCode && o.recyclerCode === req.user.tenant) ||
+      o.recycler === req.user.name || 
+      o.recycler === req.user.tenant
+    );
   }
   return orders;
 };

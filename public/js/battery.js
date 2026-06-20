@@ -316,7 +316,7 @@ function showCreateModal() {
         </div>
         <div class="form-item">
           <label>电芯型号 <span style="color: #ff4466;">*</span></label>
-          <input type="text" id="new-cellmodel" placeholder="请输入电芯型号">
+          <input type="text" id="new-cellmodel" value="${defaultType === '磷酸铁锂' ? 'LFP280' : 'NCM280'}" placeholder="请输入电芯型号">
         </div>
         <div class="form-item">
           <label>电芯配方 <span style="color: #ff4466;">*</span></label>
@@ -486,6 +486,15 @@ function updateFormulaOptions() {
   
   const formulas = batteryMeta.cellFormulas[type] || [];
   select.innerHTML = formulas.map(f => `<option value="${f}">${f}</option>`).join('');
+  
+  const cellModelEl = document.getElementById('new-cellmodel');
+  if (cellModelEl) {
+    const prefix = type === '磷酸铁锂' ? 'LFP' : type === '锰酸锂' ? 'LMO' : 'NCM';
+    const currentVal = cellModelEl.value;
+    if (!currentVal || ['NCM280', 'LFP280', 'LMO280'].includes(currentVal)) {
+      cellModelEl.value = prefix + '280';
+    }
+  }
 }
 
 function createBattery() {

@@ -49,6 +49,8 @@ function renderWarningList(warnings) {
     return;
   }
   
+  const canHandleWarning = currentUser && (currentUser.role === 'admin' || currentUser.role === 'oem');
+  
   list.innerHTML = warnings.map(w => `
     <div class="warning-item level-${w.level}">
       <div class="warning-icon">
@@ -71,7 +73,7 @@ function renderWarningList(warnings) {
         </div>
       </div>
       <div class="warning-action">
-        ${w.status === 'pending' 
+        ${w.status === 'pending' && canHandleWarning
           ? `<button class="btn btn-success btn-sm" onclick="handleWarning('${w.id}')">处理</button>`
           : `<button class="btn btn-secondary btn-sm" onclick="viewWarningDetail('${w.id}')">详情</button>`
         }

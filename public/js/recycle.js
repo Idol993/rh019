@@ -96,6 +96,8 @@ function renderDismantleDetail(order) {
   const hasData = order.dismantleData || (order.data && order.data.dismantleData);
   const data = order.dismantleData || (order.data && order.data.dismantleData);
   
+  const canSubmitDismantle = currentUser && (currentUser.role === 'admin' || currentUser.role === 'recycler');
+  
   if (isCompleted && data) {
     detailEl.innerHTML = `
       <div style="background:rgba(0,212,255,0.1);padding:16px;border-radius:8px;margin-bottom:16px;">
@@ -162,6 +164,54 @@ function renderDismantleDetail(order) {
         </div>
       </div>
       
+      <div style="margin-top:16px;">
+        <button class="btn btn-secondary" onclick="viewBatteryTrace('${batteryId}')">查看溯源链</button>
+      </div>
+    `;
+  } else if (!canSubmitDismantle) {
+    detailEl.innerHTML = `
+      <div style="background:rgba(0,212,255,0.1);padding:16px;border-radius:8px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <h3 style="margin:0;">${order.orderNo}</h3>
+          <span class="status-badge status-${order.status}">${getOrderStatusText(order.status)}</span>
+        </div>
+        <div style="font-size:13px;color:var(--text-muted);">
+          电池ID: <span style="font-family:monospace;">${batteryId}</span>
+          &nbsp;|&nbsp; 电池类型: ${order.batteryType || '-'}
+          &nbsp;|&nbsp; 创建时间: ${new Date(order.createTime).toLocaleString('zh-CN')}
+        </div>
+      </div>
+      
+      <h4 style="margin-bottom:12px;color:var(--accent-primary);">工单信息</h4>
+      <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">
+        <div class="form-item">
+          <label style="color:var(--text-muted);">工单编号</label>
+          <div style="font-family:monospace;">${order.orderNo}</div>
+        </div>
+        <div class="form-item">
+          <label style="color:var(--text-muted);">工单类型</label>
+          <div>${order.type === 'echelon' ? '梯次利用评估' : '拆解工单'}</div>
+        </div>
+        <div class="form-item">
+          <label style="color:var(--text-muted);">回收商</label>
+          <div>${order.recycler || '-'}</div>
+        </div>
+        <div class="form-item">
+          <label style="color:var(--text-muted);">创建人</label>
+          <div>${order.operator || '-'}</div>
+        </div>
+        <div class="form-item">
+          <label style="color:var(--text-muted);">额定容量</label>
+          <div>${order.batteryInfo?.ratedCapacity || '-'} Ah</div>
+        </div>
+        <div class="form-item">
+          <label style="color:var(--text-muted);">当前SOH</label>
+          <div>${order.batteryInfo?.currentSoh || '-'}%</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:rgba(255,170,0,0.08);border:1px solid rgba(255,170,0,0.2);border-radius:6px;font-size:13px;color:#ffaa00;">
+        ℹ️ 该工单当前为待处理状态，仅回收商账号可提交拆解记录。
+      </div>
       <div style="margin-top:16px;">
         <button class="btn btn-secondary" onclick="viewBatteryTrace('${batteryId}')">查看溯源链</button>
       </div>
